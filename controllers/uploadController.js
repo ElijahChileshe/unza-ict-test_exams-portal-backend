@@ -42,6 +42,9 @@ export const uploadFile = async (req, res) => {
 
         await newUpload.save();
 
+        console.log("File uploaded and saved successfully", newUpload);
+        
+
         // Send response
         res.status(201).json({
           message: "File uploaded and saved successfully",
@@ -62,16 +65,38 @@ export const uploadFile = async (req, res) => {
 };
 
 export const getUploads = async (req, res) => {
-  try {
-    const { year } = req.query;
-    const query = year ? { year: new RegExp(`^${year}$`, 'i') } : {};
-    const uploads = await Upload.find(query).sort({ uploadDate: -1 });
-    res.json(uploads);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch files' });
-  }
-};
-
+    try {
+      const { year } = req.query;
+      const query = year ? { year: new RegExp(`^${year}$`, 'i') } : {};
+  
+      // Fetch uploads and course data
+      const uploads = await Upload.find(query).sort({ uploadDate: -1 });
+      const courseData = await FileModel.find(query);
+  
+      // Merge uploads with matching course info
+    //   const combined = uploads.map(upload => {
+    //     // Match course info by year + type
+    //     const match = courseData.find(c => 
+    //       c.year.toLowerCase() === upload.year.toLowerCase() &&
+    //       c.type.toLowerCase() === upload.type.toLowerCase()
+    //     );
+  
+    //     return {
+    //       ...upload.toObject(),
+    //       courseName: match ? match.courseName : "Unknown Course",
+    //       courseCode: match ? match.courseCode : "N/A"
+    //     };
+    //   });
+  
+      console.log("Combined Data", uploads);
+      res.json(uploads);
+  
+    } catch (error) {
+      console.error("Error fetching uploads:", error);
+      res.status(500).json({ error: "Failed to fetch files" });
+    }
+  };
+  
 export const downloadFile = (req, res) => {
   const filePath = path.join('src/uploads', req.params.filename);
   if (!fs.existsSync(filePath)) return res.status(404).send('File not found');
