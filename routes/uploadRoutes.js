@@ -11,14 +11,19 @@ const uploadDir = path.join('src/uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 // Setup multer storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
-  },
-});
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => cb(null, uploadDir),
+//   filename: (req, file, cb) => {
+//     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+//     cb(null, uniqueSuffix + '-' + file.originalname);
+//   },
+// });
+// const upload = multer({ storage });
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
+
+console.log("Multer setup", upload);
+
 
 // Routes
 router.post('/', upload.single('file'), uploadFile);

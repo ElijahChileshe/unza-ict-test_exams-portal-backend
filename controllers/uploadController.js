@@ -1,23 +1,63 @@
 import Upload from '../models/Upload.js';
 import path from 'path';
 import fs from 'fs';
+import multer from "multer";
+// import cloudinary from "cloudinary";
+import dotenv from "dotenv";
+import FileModel from "../models/File.js";
+import stream from "stream";
+import { v2 as cloudinary } from "cloudinary";
 
+
+dotenv.config();
+// Cloudinary setup
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Handle upload
 export const uploadFile = async (req, res) => {
   try {
-    const { year, type } = req.body;
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const { courseName, courseCode, year, type } = req.body;
+    const fileBuffer = req.file.buffer;
 
-    const newUpload = new Upload({
-      filename: req.file.originalname,
-      filepath: `/uploads/${req.file.filename}`,
-      year,
-      type,
-    });
-    await newUpload.save();
+    // Upload file to Cloudinary
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { resource_type: "raw", folder: "unza_files" },
+      async (error, result) => {
+        if (error) return res.status(500).json({ message: error.message });
 
-    res.json({ message: 'File uploaded successfully', file: newUpload });
+        // Save metadata + file URL to MongoDB
+        const newUpload = new Upload({
+          courseName,
+          courseCode,
+          year,
+          type,
+          fileName: req.file.originalname,
+          fileUrl: result.secure_url, // Cloudinary file URL
+          uploadedAt: new Date(),
+        });
+
+        await newUpload.save();
+
+        // Send response
+        res.status(201).json({
+          message: "File uploaded and saved successfully",
+          data: newUpload,
+        });
+      }
+    );
+
+    // Pipe buffer to Cloudinary
+    const bufferStream = new stream.PassThrough();
+    bufferStream.end(fileBuffer);
+    bufferStream.pipe(uploadStream);
+
   } catch (error) {
-    res.status(500).json({ error: 'Upload failed' });
+    console.error(error);
+    res.status(500).json({ message: "Upload failed", error: error.message });
   }
 };
 
